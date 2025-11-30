@@ -15,7 +15,6 @@ class GoogleAuthHandler:
         on_error=None,
         auto_load_existing: bool = True,
         origin: str | None = None,
-        skip_ngrok_warning: bool = False,
     ):
         self.page = page
         self.user = None
@@ -55,10 +54,6 @@ class GoogleAuthHandler:
                 raise RuntimeError(f"Origen inválido en móvil: {resolved_origin}")
 
             redirect_url = f"{resolved_origin}/oauth_callback"
-
-        # No agregamos ngrok-skip para producción
-        if skip_ngrok_warning and "ngrok" in redirect_url:
-            redirect_url += "?ngrok-skip-browser-warning=1"
 
         print("[OAUTH] CLIENT_ID:", client_id)
         print("[OAUTH] REDIRECT_URL:", redirect_url)

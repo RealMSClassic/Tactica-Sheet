@@ -36,7 +36,6 @@ pip install -r requirements.txt
    - Completa las credenciales de Google OAuth:
      - `GOOGLE_CLIENT_ID`
      - `GOOGLE_CLIENT_SECRET`
-     - `NGROK_ORIGIN` (si usas ngrok)
 
 ## Ejecución
 
