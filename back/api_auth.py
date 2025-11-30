@@ -14,8 +14,6 @@ class GoogleAuthHandler:
         on_success=None,
         on_error=None,
         auto_load_existing: bool = True,
-        origin: str | None = None,
-        skip_ngrok_warning: bool = False,
     ):
         self.page = page
         self.user = None
@@ -23,7 +21,7 @@ class GoogleAuthHandler:
         self.on_success = on_success
         self.on_error = on_error
 
-        # Cargar .env SOLO LOCAL
+        # Cargar .env solo en local
         load_dotenv()
 
         client_id = os.getenv("GOOGLE_CLIENT_ID")
@@ -32,33 +30,23 @@ class GoogleAuthHandler:
         if not client_id or not client_secret:
             raise RuntimeError("GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET no están definidos.")
 
-        # 1) PRIORIDAD: GOOGLE_REDIRECT_URI
+        # PRIORIDAD 1: redirect explícito (si existe)
         redirect_uri_env = os.getenv("GOOGLE_REDIRECT_URI")
 
-        # 2) PRIORIDAD: APP_ORIGIN (Railway)
-        app_origin_env = os.getenv("APP_ORIGIN")
-
-        is_mobile = (self.page.platform in ("android", "ios"))
+        # PRIORIDAD 2: APP_ORIGIN
+        app_origin_env = os.getenv("APP_ORIGIN", "").strip().rstrip("/")
 
         if redirect_uri_env:
             redirect_url = redirect_uri_env
 
         else:
-            resolved_origin = (origin or app_origin_env or "").strip().rstrip("/")
+            # si app_origin no está definido → local
+            if app_origin_env:
+                origin = app_origin_env
+            else:
+                origin = "http://127.0.0.1:8560"
 
-            if not resolved_origin:
-                if is_mobile:
-                    raise RuntimeError("APP_ORIGIN debe estar definido para móvil.")
-                resolved_origin = "http://127.0.0.1:8560"
-
-            if is_mobile and ("localhost" in resolved_origin or "127.0.0.1" in resolved_origin):
-                raise RuntimeError(f"Origen inválido en móvil: {resolved_origin}")
-
-            redirect_url = f"{resolved_origin}/oauth_callback"
-
-        # No agregamos ngrok-skip para producción
-        if skip_ngrok_warning and "ngrok" in redirect_url:
-            redirect_url += "?ngrok-skip-browser-warning=1"
+            redirect_url = f"{origin}/oauth_callback"
 
         print("[OAUTH] CLIENT_ID:", client_id)
         print("[OAUTH] REDIRECT_URL:", redirect_url)
@@ -130,6 +118,7 @@ class GoogleAuthHandler:
             self.page.client_storage.set("auth_started_at", "")
         except Exception:
             pass
+
         self.page.session.set("auth_in_progress", False)
 
         if self.on_success:
