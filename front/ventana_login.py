@@ -18,15 +18,26 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
 ]
 
-def login_view(page: ft.Page):
+def login_view(page: ft.Page) -> ft.View:
     page.title = "Login - Táctica Sheet"
+    page.padding = 0
     page.bgcolor = ft.Colors.WHITE
+    page.scroll = "adaptive"
 
-    def cs_set(k, v):
-        try: page.client_storage.set(k, v)
-        except: page.session.set(k, v)
+    # Helpers
+    def cs_set(key: str, value):
+        try:
+            page.client_storage.set(key, value)
+        except:
+            page.session.set(key, value)
 
-    def on_login_ok(handler):
+    def now_s():
+        return time.time()
+
+    # ---------------------------
+    # LOGIN OK
+    # ---------------------------
+    def on_login_ok(handler: GoogleAuthHandler):
         tok = handler.token
 
         token_dict = {
@@ -44,13 +55,24 @@ def login_view(page: ft.Page):
         cs_set("google_oauth_token", token_dict)
         page.go("/sheets")
 
+    # ---------------------------
+    # LOGIN ERROR
+    # ---------------------------
     def on_login_error(e):
-        page.snack_bar = ft.SnackBar(ft.Text(f"Error: {e.error}"))
+        cs_set("auth_in_progress", "0")
+        cs_set("auth_started_at", "")
+        page.snack_bar = ft.SnackBar(ft.Text(f"Error: {getattr(e, 'error', e)}"))
         page.snack_bar.open = True
         page.update()
+        page.go("/")
 
+    # ---------------------------
+    # CLICK LOGIN
+    # ---------------------------
     def on_click_login(_):
         cs_set("auth_in_progress", "1")
+        cs_set("auth_started_at", str(now_s()))
+
         auth = GoogleAuthHandler(
             page,
             on_success=on_login_ok,
@@ -59,9 +81,84 @@ def login_view(page: ft.Page):
         auth.login()
         page.go("/loading")
 
+    # ---------------------------
+    # UI BONITA (ESTILO ANTERIOR)
+    # ---------------------------
+
+    logo = ft.Image(src="logo.png", width=180, height=180, fit=ft.ImageFit.CONTAIN)
+
+    title = ft.Text(
+        "TACTICA Sheet",
+        size=36,
+        weight=ft.FontWeight.W_600,
+        color=ft.Colors.BLACK87,
+    )
+
+    subtitle = ft.Text(
+        "Gestor de Stocks",
+        size=14,
+        weight=ft.FontWeight.W_500,
+        color=ft.Colors.BLUE_GREY_600,
+    )
+
     btn_login = ft.FilledButton(
         "Ingresar con Google",
+        width=230,
+        height=52,
+        style=ft.ButtonStyle(
+            bgcolor=ft.Colors.RED,
+            color=ft.Colors.WHITE,
+            shape=ft.RoundedRectangleBorder(radius=12),
+            elevation=3,
+        ),
         on_click=on_click_login,
     )
 
-    return ft.View("/", [btn_login])
+    ui = ft.Container(
+        expand=True,
+        gradient=ft.LinearGradient(
+            colors=["#FFFFFF", "#FF5963", "#EE8B60"],
+            stops=[0.0, 0.5, 1.0],
+            begin=ft.alignment.top_left,
+            end=ft.alignment.bottom_right,
+        ),
+        content=ft.Container(
+            gradient=ft.LinearGradient(
+                colors=["#00FFFFFF", "#FFFFFF"],
+                stops=[0.1, 0.3],
+                begin=ft.alignment.top_center,
+                end=ft.alignment.bottom_center,
+            ),
+            content=ft.Column(
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                expand=True,
+                controls=[
+                    ft.Container(
+                        padding=ft.padding.only(top=60),
+                        content=ft.Column(
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            controls=[
+                                logo,
+                                ft.Container(height=10),
+                                title,
+                                ft.Container(height=8),
+                                subtitle,
+                                ft.Container(height=8),
+                            ],
+                        ),
+                    ),
+                    ft.Container(
+                        padding=ft.padding.only(left=16, right=16, bottom=84),
+                        content=ft.Row(
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            controls=[btn_login]
+                        ),
+                    ),
+                ],
+            ),
+        ),
+    )
+
+    return ft.View(route="/", controls=[ui])
