@@ -85,7 +85,6 @@ def login_view(page: ft.Page) -> ft.View:
             page,
             on_success=on_login_ok,
             on_error=on_login_error,
-            skip_ngrok_warning=False,   # Producción limpia
         )
 
         auth.login()
