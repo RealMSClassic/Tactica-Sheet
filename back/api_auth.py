@@ -2,6 +2,7 @@
 import os
 import time
 import flet as ft
+from dotenv import load_dotenv
 from flet.auth.providers import GoogleOAuthProvider
 from google.oauth2 import id_token
 from google.auth.transport import requests as greq
@@ -22,30 +23,47 @@ class GoogleAuthHandler:
         self.on_success = on_success
         self.on_error = on_error
 
+        # Cargar .env solo LOCAL, en Railway no existe
+        load_dotenv()
+
         client_id = os.getenv("GOOGLE_CLIENT_ID")
         client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
-        
-        if not client_id or not client_secret:
-            raise RuntimeError("GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET deben estar definidos en el archivo .env")
 
-        origin = (origin or os.getenv("NGROK_ORIGIN") or "").strip().rstrip("/")
+        # Ahora ya no obligamos al archivo .env
+        if not client_id or not client_secret:
+            raise RuntimeError(
+                "GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET no están definidos en variables de entorno."
+            )
+
+        # PRIORIDAD: si definiste GOOGLE_REDIRECT_URI manualmente en Railway
+        redirect_uri_env = os.getenv("GOOGLE_REDIRECT_URI")
+
+        # Detectar si es móvil
         is_mobile = (self.page.platform in ("android", "ios"))
 
-        if not origin:
-            if is_mobile:
-                raise RuntimeError("NGROK_ORIGIN no definido para móvil.")
-            origin = "http://127.0.0.1:8560"
+        # Resolver ORIGIN
+        if redirect_uri_env:
+            redirect_url = redirect_uri_env
+        else:
+            origin = (origin or os.getenv("NGROK_ORIGIN") or "").strip().rstrip("/")
 
-        if is_mobile and ("localhost" in origin or "127.0.0.1" in origin):
-            raise RuntimeError(f"Origen inválido en móvil: {origin}")
+            if not origin:
+                if is_mobile:
+                    raise RuntimeError("NGROK_ORIGIN no definido para móvil.")
+                origin = "http://127.0.0.1:8560"
 
-        redirect_url = f"{origin}/oauth_callback"
+            if is_mobile and ("localhost" in origin or "127.0.0.1" in origin):
+                raise RuntimeError(f"Origen inválido en móvil: {origin}")
+
+            redirect_url = f"{origin}/oauth_callback"
+
         if skip_ngrok_warning:
             redirect_url += "?ngrok-skip-browser-warning=1"
 
-        print("[OAUTH] client_id:", client_id)
-        print("[OAUTH] redirect_url:", redirect_url)
+        print("[OAUTH] CLIENT_ID:", client_id)
+        print("[OAUTH] REDIRECT_URL:", redirect_url)
 
+        # Crear provider de Google
         self.provider = GoogleOAuthProvider(
             client_id=client_id,
             client_secret=client_secret,
@@ -63,7 +81,8 @@ class GoogleAuthHandler:
         if existing_user and existing_token:
             expires_at = getattr(existing_token, "expires_at", None)
             if expires_at and isinstance(expires_at, (int, float)) and time.time() >= float(expires_at):
-                self.logout(); return
+                self.logout()
+                return
             self.user = existing_user
             self.token = existing_token
 
@@ -95,10 +114,8 @@ class GoogleAuthHandler:
             ],
         )
 
-    # back/api_auth.py
     def _on_login(self, e: ft.LoginEvent):
         if e.error:
-            # ... tu manejo actual de error ...
             if self.on_error:
                 try:
                     self.on_error(e)
@@ -106,11 +123,9 @@ class GoogleAuthHandler:
                     pass
             return
 
-        # marcar sesión
         self.user = getattr(self.page.auth, "user", None)
         self.token = getattr(self.page.auth, "token", None)
 
-        # ✅ SIEMPRE apagar el flag de carga (por si estás en /loading)
         try:
             self.page.client_storage.set("auth_in_progress", "0")
             self.page.client_storage.set("auth_started_at", "")
@@ -124,7 +139,6 @@ class GoogleAuthHandler:
             except Exception:
                 pass
         else:
-            # fallback: si no te pasaron callback, andá al selector
             self.page.go("/sheets")
 
         self.page.update()
