@@ -15,7 +15,7 @@ class GoogleAuthHandler:
         on_error=None,
         auto_load_existing: bool = True,
         origin: str | None = None,
-        skip_ngrok_warning: bool = True,
+        skip_ngrok_warning: bool = False,
     ):
         self.page = page
         self.user = None
@@ -23,7 +23,7 @@ class GoogleAuthHandler:
         self.on_success = on_success
         self.on_error = on_error
 
-        # cargar .env local
+        # Cargar .env SOLO LOCAL
         load_dotenv()
 
         client_id = os.getenv("GOOGLE_CLIENT_ID")
@@ -32,20 +32,18 @@ class GoogleAuthHandler:
         if not client_id or not client_secret:
             raise RuntimeError("GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET no están definidos.")
 
-        # PRIORIDAD 1: callback explícito
+        # 1) PRIORIDAD: GOOGLE_REDIRECT_URI
         redirect_uri_env = os.getenv("GOOGLE_REDIRECT_URI")
 
-        # PRIORIDAD 2: definir ORIGIN por variable de entorno
+        # 2) PRIORIDAD: APP_ORIGIN (Railway)
         app_origin_env = os.getenv("APP_ORIGIN")
 
         is_mobile = (self.page.platform in ("android", "ios"))
 
         if redirect_uri_env:
-            # si definiste el redirect manual → usar ese
             redirect_url = redirect_uri_env
 
         else:
-            # si pasaste origin como parámetro → gana sobre APP_ORIGIN
             resolved_origin = (origin or app_origin_env or "").strip().rstrip("/")
 
             if not resolved_origin:
@@ -53,13 +51,12 @@ class GoogleAuthHandler:
                     raise RuntimeError("APP_ORIGIN debe estar definido para móvil.")
                 resolved_origin = "http://127.0.0.1:8560"
 
-            # evitar localhost en móviles
             if is_mobile and ("localhost" in resolved_origin or "127.0.0.1" in resolved_origin):
                 raise RuntimeError(f"Origen inválido en móvil: {resolved_origin}")
 
             redirect_url = f"{resolved_origin}/oauth_callback"
 
-        # evitar agregar ngrok warning cuando estás en Railway
+        # No agregamos ngrok-skip para producción
         if skip_ngrok_warning and "ngrok" in redirect_url:
             redirect_url += "?ngrok-skip-browser-warning=1"
 
@@ -77,7 +74,6 @@ class GoogleAuthHandler:
         if auto_load_existing:
             self._load_existing_auth()
 
-    # resto del archivo sin cambios
     def _load_existing_auth(self):
         existing_user = getattr(self.page.auth, "user", None)
         existing_token = getattr(self.page.auth, "token", None)
@@ -93,8 +89,10 @@ class GoogleAuthHandler:
         return bool(self.user and self.token) or bool(getattr(self.page.auth, "token", None))
 
     def logout(self):
-        try: self.page.logout()
-        except Exception: pass
+        try:
+            self.page.logout()
+        except Exception:
+            pass
         self.user = None
         self.token = None
 
@@ -118,8 +116,10 @@ class GoogleAuthHandler:
     def _on_login(self, e: ft.LoginEvent):
         if e.error:
             if self.on_error:
-                try: self.on_error(e)
-                except Exception: pass
+                try:
+                    self.on_error(e)
+                except Exception:
+                    pass
             return
 
         self.user = getattr(self.page.auth, "user", None)
@@ -133,8 +133,10 @@ class GoogleAuthHandler:
         self.page.session.set("auth_in_progress", False)
 
         if self.on_success:
-            try: self.on_success(self)
-            except Exception: pass
+            try:
+                self.on_success(self)
+            except Exception:
+                pass
         else:
             self.page.go("/sheets")
 
