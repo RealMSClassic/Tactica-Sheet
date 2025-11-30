@@ -30,11 +30,11 @@ uploads/
 *.log
 
 # Secrets y configuración sensible
+.env
 credentials.json
 token.json
 *.pem
 *.key
-.env
 
 # Ngrok
 ngrok.exe

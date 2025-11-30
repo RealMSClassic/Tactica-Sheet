@@ -3,7 +3,11 @@ import os
 import secrets
 from pathlib import Path
 import flet as ft
+from dotenv import load_dotenv
 from front.ventana_login import login_view  # solo login arriba; el resto, lazy import
+
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 ASSETS_PATH = (Path(__file__).parent / "front" / "assets").resolve()
 DEFAULT_UPLOAD_DIR = (Path(__file__).parent / "uploads").resolve()

@@ -22,8 +22,11 @@ class GoogleAuthHandler:
         self.on_success = on_success
         self.on_error = on_error
 
-        client_id = os.getenv("GOOGLE_CLIENT_ID") or "249531315844-0fmb6ms8ql00a5nhqkbeasd32pdrktv7.apps.googleusercontent.com"
-        client_secret = os.getenv("GOOGLE_CLIENT_SECRET") or "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"
+        client_id = os.getenv("GOOGLE_CLIENT_ID")
+        client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+        
+        if not client_id or not client_secret:
+            raise RuntimeError("GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET deben estar definidos en el archivo .env")
 
         origin = (origin or os.getenv("NGROK_ORIGIN") or "").strip().rstrip("/")
         is_mobile = (self.page.platform in ("android", "ios"))
