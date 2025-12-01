@@ -24,7 +24,7 @@ DEFAULT_SHEET_DATA: dict[str, list[str]] = {
     "deposito":      ["data_ini_prox", "RecID", "ID_deposito", "nombre_deposito", "direccion_deposito", "descripcion_deposito", "RecID_Imagen"],
     "logs":          ["data_ini_prox", "fecha", "ID_usuario", "Accion"],
     "usuarios":      ["data_ini_prox", "RecID", "ID_usuario", "nombre_usuario", "correo_usuario", "rango_usuario", "RecID_Imagen"],
-    "logsAcn":       ["data_ini_prox", "RecID", "tipo_accion", "movimiento"],
+    "logsAcn":       ["data_ini_prox", "RecID", "ID_producto" "ID_deposito", "cantidad", "movimiento", "tipo_accion"],
     "dataIndexInfo": ["data_ini_prox", "fecha_creacion", "version_sheet", "version_gestor"],
     # ✅ Nueva hoja
     "imagen":        ["data_ini_prox", "RecID", "ID_nombre"],
@@ -123,7 +123,7 @@ def _seed_after_create(page: ft.Page, sheets_service, spreadsheet_id: str, struc
         headers = structure["dataIndexInfo"]
         last_col = _col_letter(len(headers))  # D
         fecha_creacion = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        values = [["", fecha_creacion, "0.0.1", "0.2.0"]]
+        values = [["", fecha_creacion, "0.0.2", "0.3.0"]]
         sheets_service.spreadsheets().values().update(
             spreadsheetId=spreadsheet_id,
             range=f"dataIndexInfo!A2:{last_col}2",

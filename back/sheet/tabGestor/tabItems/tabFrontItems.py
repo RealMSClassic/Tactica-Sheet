@@ -55,7 +55,7 @@ def build_items_tab(page: ft.Page, backend, bus=None) -> ft.Control:
         page.update()
 
     # ----- UI top -----
-    status = ft.Text("", size=12, color=ft.Colors.GREY_600)
+    status = ft.Text("", size=12, color=ft.Colors.GREEN_400)#Cantidad Items : 0
     sort_mode = {"value": "name_asc"}
 
     def set_sort(sm: str):
@@ -177,6 +177,9 @@ def build_items_tab(page: ft.Page, backend, bus=None) -> ft.Control:
         lv_holder.content = new_lv_holder.content
         lv_holder.height  = new_lv_holder.height
         status.value = new_status.value
+        numero = "".join(filter(str.isdigit, new_status.value))
+
+        total_label.value = f"Total: {numero}"
         page.update()
 
         async def _render_images_async():
@@ -560,17 +563,65 @@ def build_items_tab(page: ft.Page, backend, bus=None) -> ft.Control:
         cancel.on_click = close_bs
 
     # ----- layout principal -----
-    header = ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[ft.Text("Ítems", size=22, weight=ft.FontWeight.W_700), status])
+    # <<< CAMBIO 1 >>> TÍTULO + TOTAL + BOTÓN AGREGAR
+    total_label = ft.Text(
+    "Total: 0",
+    size=14,
+    color=ft.Colors.GREY_600,
+)
+    header = ft.Row(
+        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=[
+            ft.Row(
+                spacing=8,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Text("Ítems", size=22, weight=ft.FontWeight.W_700),
+                    total_label,   # <<--- TOTAL AQUÍ
+                ],
+            ),
+
+            ft.FilledButton(
+                "Agregar",
+                icon=ft.Icons.ADD,
+                style=ft.ButtonStyle(
+                    padding=8,
+                    bgcolor=PRIMARY,
+                    color=WHITE,
+                    shape=ft.RoundedRectangleBorder(radius=6),
+                ),
+                on_click=open_add_panel,
+            ),
+        ],
+    )
+    # <<< CAMBIO 2 >>> BUSCADOR + BOTÓN FILTRO EN LA MISMA FILA
+    search_row = ft.Row(
+        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=[
+            ft.Container(expand=True, content=search),
+            ft.Container(padding=ft.padding.only(left=10), content=filter_btn)
+        ],
+    )
     btn_add = ft.FilledButton("Agregar ítem", icon=ft.Icons.ADD, style=ft.ButtonStyle(bgcolor=PRIMARY, color=WHITE), on_click=open_add_panel)
     right_controls = ft.Row(alignment=ft.MainAxisAlignment.END, controls=[filter_btn])
     action_row = ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[btn_add, right_controls])
 
     root = ft.Container(
-        bgcolor=ft.Colors.GREY_50,
         expand=True,
-        border_radius=12,
-        padding=16,
-        content=ft.Column(spacing=10, expand=True, controls=[header, search, action_row, ft.Container(expand=True, content=lv_holder)]),
+        padding=0,
+        bgcolor=None,
+        border_radius=0,
+        content=ft.Column(
+            expand=True,
+            spacing=10,
+            controls=[
+                header,
+                search_row,
+                ft.Container(expand=True, content=lv_holder),
+            ],
+        ),
     )
 
     _safe_refresh(); render_list()

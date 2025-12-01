@@ -141,7 +141,7 @@ def panel_window_view(page: ft.Page) -> ft.View:
     normal_style = ft.ButtonStyle(
         bgcolor=ft.Colors.TRANSPARENT,
         color=TXT,
-        overlay_color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+        overlay_color=ft.Colors.with_opacity(0.06, ft.Colors.GREEN_400),
         padding=ft.padding.symmetric(horizontal=14, vertical=10),
         shape=ft.RoundedRectangleBorder(radius=10),
         animation_duration=200,
@@ -157,7 +157,7 @@ def panel_window_view(page: ft.Page) -> ft.View:
     # ===== Vistas =====
     def card_stub(title: str, desc: str) -> ft.Control:
         return ft.Container(
-            bgcolor=WHITE,
+            bgcolor=ft.Colors.GREEN,
             border_radius=12,
             padding=16,
             shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.GREY_200, spread_radius=0.5),
@@ -440,7 +440,7 @@ def panel_window_view(page: ft.Page) -> ft.View:
 
     appbar = ft.AppBar(
         leading=menu_btn,
-        title=ft.Text(f"Base : {sheet_name}", color=WHITE),
+        title=ft.Text(f"Base :   {sheet_name}", color=WHITE),
         center_title=False, bgcolor=PRIMARY, color=WHITE,
     )
 

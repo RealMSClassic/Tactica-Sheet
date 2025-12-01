@@ -139,7 +139,7 @@ class LogAPI:
         self._ensure_logs_sheet()
 
         display_name, _uid = _get_identity(self.page)
-        ts = fecha or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ts = fecha or datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         action_text = f"{display_name} — {accion}" if include_user_name_in_action else accion
 
         # 👇 Guardamos el **NOMBRE** en ID_usuario

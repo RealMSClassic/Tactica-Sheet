@@ -1,12 +1,16 @@
+
 # front/ventana_login.py
+print(">>> LOGIN_VIEW VERSION: CLEAN-PROD <<<")
+
 import os
 import time
 import flet as ft
+import back.api_auth
+print(">>> IMPORTADO DESDE:", back.api_auth.__file__)
 from back.api_auth import GoogleAuthHandler
 
-AUTH_WINDOW_SEC = 120  # mantener igual que en loading/main
+AUTH_WINDOW_SEC = 120
 
-# Scopes que queremos conservar junto al token para Drive/Sheets
 SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
@@ -21,108 +25,92 @@ def login_view(page: ft.Page) -> ft.View:
     page.bgcolor = ft.Colors.WHITE
     page.scroll = "adaptive"
 
-    # ---- helpers persistentes ----
+    # Helpers
     def cs_set(key: str, value):
         try:
             page.client_storage.set(key, value)
-        except Exception:
+        except:
             page.session.set(key, value)
 
-    def now_s() -> float:
+    def now_s():
         return time.time()
 
-    # ---- callbacks OAuth ----
+    # ---------------------------
+    # LOGIN OK
+    # ---------------------------
     def on_login_ok(handler: GoogleAuthHandler):
-        # apaga el “cargando”
-        cs_set("auth_in_progress", "0")
-        cs_set("auth_started_at", "")
+        tok = handler.token
 
-        # Guarda “rápidos” (opcional)
-        tok_obj = getattr(handler, "token", None)
-        access_token = None
-        refresh_token = None
-        id_token = None
-        expires_in = None
-        token_type = None
-
-        # handler.token puede ser dict o un objeto con attrs
-        if isinstance(tok_obj, dict):
-            access_token = tok_obj.get("access_token")
-            refresh_token = tok_obj.get("refresh_token")
-            id_token = tok_obj.get("id_token")
-            expires_in = tok_obj.get("expires_in")
-            token_type = tok_obj.get("token_type")
-        else:
-            access_token = getattr(tok_obj, "access_token", None)
-            refresh_token = getattr(tok_obj, "refresh_token", None)
-            id_token = getattr(tok_obj, "id_token", None)
-            expires_in = getattr(tok_obj, "expires_in", None)
-            token_type = getattr(tok_obj, "token_type", None)
-
-        page.session.set("id_token", id_token)
-        page.session.set("access_token", access_token)
-
-        # ✅ GUARDAR TOKEN COMPLETO EN client_storage
         token_dict = {
-            "access_token": access_token,
-            "refresh_token": refresh_token,  # puede venir None si no pediste offline
-            "id_token": id_token,
-            "expires_in": expires_in,
-            "token_type": token_type,
+            "access_token": getattr(tok, "access_token", None),
+            "refresh_token": getattr(tok, "refresh_token", None),
+            "id_token": getattr(tok, "id_token", None),
+            "expires_in": getattr(tok, "expires_in", None),
+            "token_type": getattr(tok, "token_type", None),
             "token_uri": "https://oauth2.googleapis.com/token",
-            # completamos client_id / client_secret desde env (necesarios para refrescar token)
             "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
             "client_secret": os.getenv("GOOGLE_CLIENT_SECRET", ""),
             "scopes": SCOPES,
         }
-        # Esto es lo que tu DriveUserUploader.from_page espera encontrar.
-        cs_set("google_oauth_token", token_dict)
 
-        # navega al selector
+        cs_set("google_oauth_token", token_dict)
         page.go("/sheets")
 
+    # ---------------------------
+    # LOGIN ERROR
+    # ---------------------------
     def on_login_error(e):
         cs_set("auth_in_progress", "0")
         cs_set("auth_started_at", "")
-        page.snack_bar = ft.SnackBar(ft.Text(f"Error de login: {getattr(e, 'error', e)}"))
+        page.snack_bar = ft.SnackBar(ft.Text(f"Error: {getattr(e, 'error', e)}"))
         page.snack_bar.open = True
         page.update()
-        page.go("/")  # volvemos a login
+        page.go("/")
 
-    # Si tenés un dominio público para OAuth
-    CURRENT_ORIGIN = "https://shepherd-correct-intensely.ngrok-free.app"
-
-    # ---- UI ----
-    logo = ft.Image(src="logo.png", width=180, height=180, fit=ft.ImageFit.CONTAIN)
-    title = ft.Text("TACTICA Sheet", size=36, weight=ft.FontWeight.W_600, color=ft.Colors.BLACK87)
-    subtitle = ft.Text("Gestor de Stocks", size=14, weight=ft.FontWeight.W_500, color=ft.Colors.BLUE_GREY_600)
-
-    def on_click_login(_: ft.ControlEvent):
-        # marcar “en progreso” y mandar a /loading
+    # ---------------------------
+    # CLICK LOGIN
+    # ---------------------------
+    def on_click_login(_):
         cs_set("auth_in_progress", "1")
         cs_set("auth_started_at", str(now_s()))
 
-        # Crear el handler y disparar login (tu handler ya abre popup)
         auth = GoogleAuthHandler(
             page,
             on_success=on_login_ok,
             on_error=on_login_error,
-            origin=CURRENT_ORIGIN,
-            skip_ngrok_warning=True,
         )
-
-        # Si tu GoogleAuthHandler permite configurar scopes / access_type / prompt,
-        # asegurate de pasarlos ahí dentro (depende de tu implementación).
-        # auth.login(scopes=SCOPES, access_type="offline", prompt="consent")
         auth.login()
         page.go("/loading")
 
+    # ---------------------------
+    # UI BONITA (ESTILO ANTERIOR)
+    # ---------------------------
+
+    logo = ft.Image(src="logo.png", width=180, height=180, fit=ft.ImageFit.CONTAIN)
+
+    title = ft.Text(
+        "TACTICA Sheet",
+        size=36,
+        weight=ft.FontWeight.W_600,
+        color=ft.Colors.BLACK87,
+    )
+
+    subtitle = ft.Text(
+        "Gestor de Stocks",
+        size=14,
+        weight=ft.FontWeight.W_500,
+        color=ft.Colors.BLUE_GREY_600,
+    )
+
     btn_login = ft.FilledButton(
         "Ingresar con Google",
-        width=230, height=52,
+        width=230,
+        height=52,
         style=ft.ButtonStyle(
-            bgcolor=ft.Colors.RED, color=ft.Colors.WHITE,
-            shape=ft.RoundedRectangleBorder(radius=12), elevation=3,
+            bgcolor=ft.Colors.RED,
+            color=ft.Colors.WHITE,
+            shape=ft.RoundedRectangleBorder(radius=12),
+            elevation=3,
         ),
         on_click=on_click_login,
     )
@@ -164,7 +152,10 @@ def login_view(page: ft.Page) -> ft.View:
                     ),
                     ft.Container(
                         padding=ft.padding.only(left=16, right=16, bottom=84),
-                        content=ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[btn_login]),
+                        content=ft.Row(
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            controls=[btn_login]
+                        ),
                     ),
                 ],
             ),

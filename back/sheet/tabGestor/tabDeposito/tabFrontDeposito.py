@@ -52,8 +52,8 @@ def build_deposito_tab(page: ft.Page, backend, bus=None) -> ft.Control:
         elif hasattr(backend, "refresh_depositos"):
             backend.refresh_depositos()
 
+
     def _run_task(coro_or_func, *args):
-        """Ejecuta tareas async con page.run_task si está; si no, usa asyncio."""
         try:
             return page.run_task(coro_or_func, *args)
         except AttributeError:
@@ -91,7 +91,9 @@ def build_deposito_tab(page: ft.Page, backend, bus=None) -> ft.Control:
         page.update()
 
     # ----------------- UI top -----------------
-    status = ft.Text("", size=12, color=ft.Colors.GREY_600)
+    status = ft.Text("", size=12, color=ft.Colors.GREY_600)   # ← Texto que trae "Total depósitos: XX"
+    total_label = ft.Text("Total: 0", size=14, color=ft.Colors.GREY_600)
+
     sort_mode = {"value": "name_asc"}
 
     def set_sort(sm: str):
@@ -116,12 +118,11 @@ def build_deposito_tab(page: ft.Page, backend, bus=None) -> ft.Control:
         items=[
             ft.PopupMenuItem(text="Nombre A–Z", on_click=lambda _: set_sort("name_asc")),
             ft.PopupMenuItem(text="Nombre Z–A", on_click=lambda _: set_sort("name_desc")),
-            ft.PopupMenuItem(text="ID A–Z",     on_click=lambda _: set_sort("id_asc")),
-            ft.PopupMenuItem(text="ID Z–A",     on_click=lambda _: set_sort("id_desc")),
+            ft.PopupMenuItem(text="ID A–Z", on_click=lambda _: set_sort("id_asc")),
+            ft.PopupMenuItem(text="ID Z–A", on_click=lambda _: set_sort("id_desc")),
         ],
     )
 
-    # holder de la lista
     lv_holder = ft.Container()
 
     # ----------------- FilePicker global (para EDIT) -----------------
@@ -286,7 +287,13 @@ def build_deposito_tab(page: ft.Page, backend, bus=None) -> ft.Control:
 
         lv_holder.content = new_lv_holder.content
         lv_holder.height = new_lv_holder.height
+
         status.value = new_status.value
+
+        # extraer número
+        numero = "".join(filter(str.isdigit, new_status.value))
+        total_label.value = f"Total: {numero}"
+
         page.update()
 
         async def _render_images_async():
@@ -295,8 +302,8 @@ def build_deposito_tab(page: ft.Page, backend, bus=None) -> ft.Control:
             for c in conts:
                 try:
                     _run_task(ensure_image_for_container_async, c)
-                except Exception as ex:
-                    print(f"[IMG async] schedule error: {ex}", flush=True)
+                except:
+                    pass
             await asyncio.sleep(0.05)
             page.update()
 
@@ -995,36 +1002,65 @@ def build_deposito_tab(page: ft.Page, backend, bus=None) -> ft.Control:
     # ----------------- layout principal -----------------
     header = ft.Row(
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-        controls=[ft.Text("Depósitos", size=22, weight=ft.FontWeight.W_700), status],
-    )
-    btn_add = ft.FilledButton(
-        "Agregar depósito", icon=ft.Icons.ADD,
-        style=ft.ButtonStyle(bgcolor=PRIMARY, color=WHITE),
-        on_click=open_add_panel,
-    )
-    right_controls = ft.Row(alignment=ft.MainAxisAlignment.END, controls=[filter_btn])
-    action_row = ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[btn_add, right_controls])
+        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=[
+            ft.Row(
+                spacing=8,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Text("Depósitos", size=22, weight=ft.FontWeight.W_700),
+                    total_label,
+                ],
+            ),
 
+            ft.FilledButton(
+                "Agregar",
+                icon=ft.Icons.ADD,
+                style=ft.ButtonStyle(
+                    padding=8,
+                    bgcolor=PRIMARY,
+                    color=WHITE,
+                    shape=ft.RoundedRectangleBorder(radius=6),
+                ),
+                on_click=open_add_panel,
+            ),
+        ],
+    )
+
+    # Buscador + filtro en la misma fila
+    search_row = ft.Row(
+        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=[
+            ft.Container(expand=True, content=search),
+            ft.Container(padding=ft.padding.only(left=10), content=filter_btn)
+        ],
+    )
+
+    # ---------------- ROOT FINAL ----------------
     root = ft.Container(
         bgcolor=ft.Colors.GREY_50,
+        border_radius=0,
+        padding=0,
         expand=True,
-        border_radius=12,
-        padding=16,
         content=ft.Column(
             spacing=10,
             expand=True,
-            controls=[header, search, action_row, ft.Container(expand=True, content=lv_holder)],
+            controls=[
+                header,        # Depósitos + Total + Agregar
+                search_row,    # Buscador + filtro
+                ft.Container(expand=True, content=lv_holder),
+            ],
         ),
     )
 
-    print("[DepositoUI] backend:", type(backend), getattr(backend, "__module__", "?"), flush=True)
     _safe_refresh()
     render_list()
 
     if bus:
         try:
             bus.subscribe("depositos_changed", lambda _=None: (_safe_refresh(), render_list()))
-        except Exception:
+        except:
             pass
 
     return root
